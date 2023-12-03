@@ -3,6 +3,7 @@ package wal
 import (
 	"encoding/binary"
 	"errors"
+	"fastdb"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"hash/crc32"
 	"io"
@@ -31,7 +32,7 @@ const (
 	chunkHeaderSize = 7
 
 	// 32 KB
-	blockSize = 32 * KB
+	blockSize = 32 * fastdb.KB
 
 	fileModePerm = 0644
 )
@@ -299,4 +300,13 @@ func (segReader *segmentReader) Next() ([]byte, *ChunkPosition, error) {
 	segReader.blockNumber = nextChunk.BlockNumber
 	segReader.chunkOffset = nextChunk.ChunkOffset
 	return value, chunkPosition, nil
+}
+
+func (seg *segment) Close() error {
+	if seg.closed {
+		return nil
+	}
+
+	seg.closed = true
+	return seg.fd.Close()
 }

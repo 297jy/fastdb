@@ -251,3 +251,23 @@ func (r *Reader) Next() ([]byte, *ChunkPosition, error) {
 	}
 	return data, position, err
 }
+
+func (wal *WAL) Close() error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+
+	if wal.blockCache != nil {
+		wal.blockCache.Purge()
+	}
+
+	// close all segment files.
+	for _, segment := range wal.olderSegments {
+		if err := segment.Close(); err != nil {
+			return err
+		}
+	}
+	wal.olderSegments = nil
+
+	// close the active segment file.
+	return wal.activeSegment.Close()
+}

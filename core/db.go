@@ -131,3 +131,50 @@ func (db *DB) loadIndexFromWAL() error {
 	}
 	return nil
 }
+
+func (db *DB) Close() error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if err := db.dataFiles.Close(); err != nil {
+		return err
+	}
+
+	if err := db.fileLock.Unlock(); err != nil {
+		return err
+	}
+
+	db.closed = true
+	return nil
+}
+
+func (db *DB) Put(key []byte, value []byte) error {
+	options := fastdb.DefaultBatchOptions
+	options.Sync = false
+	batch := db.NewBatch(options)
+	if err := batch.Put(key, value); err != nil {
+		return err
+	}
+	return batch.Commit()
+}
+
+func (db *DB) Get(key []byte) ([]byte, error) {
+	options := fastdb.DefaultBatchOptions
+	// Read-only operation
+	options.ReadOnly = true
+	batch := db.NewBatch(options)
+	defer func() {
+		_ = batch.Commit()
+	}()
+	return batch.Get(key)
+}
+
+func (db *DB) Delete(key []byte) error {
+	options := fastdb.DefaultBatchOptions
+	options.Sync = false
+	batch := db.NewBatch(options)
+	if err := batch.Delete(key); err != nil {
+		return err
+	}
+	return batch.Commit()
+}

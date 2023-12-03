@@ -140,7 +140,7 @@ func (t *Txn[T]) writeNode(n *Node[T], forLeafUpdate bool) *Node[T] {
 	nc := &Node[T]{
 		leaf: n.leaf,
 	}
-	if n.leaf != nil {
+	if n.prefix != nil {
 		nc.prefix = make([]byte, len(n.prefix))
 		copy(nc.prefix, n.prefix)
 	}

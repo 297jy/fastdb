@@ -1,6 +1,9 @@
 package wal
 
-import "os"
+import (
+	"fastdb"
+	"os"
+)
 
 type Options struct {
 	// WAL segment 文件存放的目录
@@ -21,18 +24,11 @@ type Options struct {
 	BytesPerSync uint32
 }
 
-const (
-	B  = 1
-	KB = 1024 * B
-	MB = 1024 * KB
-	GB = 1024 * MB
-)
-
 var DefaultOptions = Options{
 	DirPath:        os.TempDir(),
-	SegmentSize:    GB,
+	SegmentSize:    fastdb.GB,
 	SegmentFileExt: ".SEG",
-	BlockCache:     32 * KB * 10,
+	BlockCache:     32 * fastdb.KB * 10,
 	Sync:           false,
 	BytesPerSync:   0,
 }
