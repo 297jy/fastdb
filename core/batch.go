@@ -1,7 +1,8 @@
 package core
 
 import (
-	"fastdb"
+	"fastdb/common"
+	"fastdb/config"
 	"fastdb/wal"
 	"fmt"
 	"github.com/bwmarrin/snowflake"
@@ -13,13 +14,13 @@ import (
 type Batch struct {
 	db            *DB
 	pendingWrites map[string]*LogRecord
-	options       fastdb.BatchOptions
+	options       config.BatchOptions
 	mu            sync.RWMutex
 	committed     bool
 	batchId       *snowflake.Node
 }
 
-func (db *DB) NewBatch(options fastdb.BatchOptions) *Batch {
+func (db *DB) NewBatch(options config.BatchOptions) *Batch {
 	batch := &Batch{
 		db:        db,
 		options:   options,
@@ -53,15 +54,19 @@ func (b *Batch) unlock() {
 	}
 }
 
+func (b *Batch) Close() {
+	b.unlock()
+}
+
 func (b *Batch) Put(key []byte, value []byte) error {
 	if len(key) == 0 {
-		return fastdb.ErrKeyIsEmpty
+		return common.NewErr(&common.KeyIsEmptyErrNo, common.ErrKeyIsEmpty)
 	}
 	if b.db.closed {
-		return fastdb.ErrDBClosed
+		return common.NewErr(&common.DBClosedErrNo, common.ErrDBClosed)
 	}
 	if b.options.ReadOnly {
-		return fastdb.ErrReadOnlyBatch
+		return common.NewErr(&common.ReadOnlyBatchErrNo, common.ErrReadOnlyBatch)
 	}
 
 	b.mu.Lock()
@@ -76,10 +81,10 @@ func (b *Batch) Put(key []byte, value []byte) error {
 
 func (b *Batch) Get(key []byte) ([]byte, error) {
 	if len(key) == 0 {
-		return nil, fastdb.ErrKeyIsEmpty
+		return nil, common.NewErr(&common.KeyIsEmptyErrNo, common.ErrKeyIsEmpty)
 	}
 	if b.db.closed {
-		return nil, fastdb.ErrDBClosed
+		return nil, common.NewErr(&common.DBClosedErrNo, common.ErrDBClosed)
 	}
 
 	if b.pendingWrites != nil {
@@ -87,7 +92,7 @@ func (b *Batch) Get(key []byte) ([]byte, error) {
 		if record := b.pendingWrites[string(key)]; record != nil {
 			if record.Type == LogRecordDeleted {
 				b.mu.RUnlock()
-				return nil, fastdb.ErrKeyNotFound
+				return nil, common.NewErr(&common.KeyNotFoundErrNo, common.ErrKeyNotFound)
 			}
 			b.mu.RUnlock()
 			return record.Value, nil
@@ -96,29 +101,29 @@ func (b *Batch) Get(key []byte) ([]byte, error) {
 
 	chunkPosition := b.db.index.Get(key)
 	if chunkPosition == nil {
-		return nil, fastdb.ErrKeyNotFound
+		return nil, common.NewErr(&common.KeyNotFoundErrNo, common.ErrKeyNotFound)
 	}
 	chunk, err := b.db.dataFiles.Read(chunkPosition)
 	if err != nil {
-		return nil, err
+		return nil, common.NewErr(&common.InnerErrNo, err)
 	}
 
 	record := decodeLogRecord(chunk)
 	if record.Type == LogRecordDeleted {
-		return nil, fastdb.ErrKeyNotFound
+		return nil, common.NewErr(&common.KeyNotFoundErrNo, common.ErrKeyNotFound)
 	}
 	return record.Value, nil
 }
 
 func (b *Batch) Delete(key []byte) error {
 	if len(key) == 0 {
-		return fastdb.ErrKeyIsEmpty
+		return common.NewErr(&common.KeyIsEmptyErrNo, common.ErrKeyIsEmpty)
 	}
 	if b.db.closed {
-		return fastdb.ErrDBClosed
+		return common.NewErr(&common.DBClosedErrNo, common.ErrDBClosed)
 	}
 	if b.options.ReadOnly {
-		return fastdb.ErrReadOnlyBatch
+		return common.NewErr(&common.ReadOnlyBatchErrNo, common.ErrReadOnlyBatch)
 	}
 
 	b.mu.Lock()
@@ -137,9 +142,8 @@ func (b *Batch) Delete(key []byte) error {
 }
 
 func (b *Batch) Commit() error {
-	defer b.unlock()
 	if b.db.closed {
-		return fastdb.ErrDBClosed
+		return common.ErrDBClosed
 	}
 
 	if b.options.ReadOnly || len(b.pendingWrites) == 0 {
@@ -150,7 +154,7 @@ func (b *Batch) Commit() error {
 	defer b.mu.Unlock()
 
 	if b.committed {
-		return fastdb.ErrBatchCommitted
+		return common.ErrBatchCommitted
 	}
 
 	batchId := b.batchId.Generate()

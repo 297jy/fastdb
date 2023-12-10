@@ -1,7 +1,7 @@
 package index
 
 import (
-	"fastdb/utils"
+	"fastdb/common"
 	"fastdb/wal"
 	"reflect"
 	"testing"
@@ -23,13 +23,13 @@ func TestIRadixTree_Put(t *testing.T) {
 			"empty-key", tree, args{key: nil, position: nil}, nil,
 		},
 		{
-			"empty-value", tree, args{key: utils.GetTestKey(1), position: nil}, nil,
+			"empty-value", tree, args{key: common.GetTestKey(1), position: nil}, nil,
 		},
 		{
-			"valid-key-value", tree, args{key: utils.GetTestKey(1), position: &wal.ChunkPosition{SegmentId: 1, BlockNumber: 1, ChunkOffset: 100}}, nil,
+			"valid-key-value", tree, args{key: common.GetTestKey(1), position: &wal.ChunkPosition{SegmentId: 1, BlockNumber: 1, ChunkOffset: 100}}, nil,
 		},
 		{
-			"duplicated-key", tree, args{key: utils.GetTestKey(1), position: &wal.ChunkPosition{SegmentId: 2, BlockNumber: 2, ChunkOffset: 200}},
+			"duplicated-key", tree, args{key: common.GetTestKey(1), position: &wal.ChunkPosition{SegmentId: 2, BlockNumber: 2, ChunkOffset: 200}},
 			&wal.ChunkPosition{SegmentId: 1, BlockNumber: 1, ChunkOffset: 100},
 		},
 	}
@@ -44,8 +44,8 @@ func TestIRadixTree_Put(t *testing.T) {
 
 func TestIRadixTree_Get(t *testing.T) {
 	tree := newRadixTree()
-	tree.Put(utils.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 1, ChunkOffset: 100})
-	tree.Put(utils.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300})
+	tree.Put(common.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 1, ChunkOffset: 100})
+	tree.Put(common.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300})
 	type args struct {
 		key []byte
 	}
@@ -56,10 +56,10 @@ func TestIRadixTree_Get(t *testing.T) {
 		want *wal.ChunkPosition
 	}{
 		{
-			"not-exist", tree, args{key: utils.GetTestKey(10000)}, nil,
+			"not-exist", tree, args{key: common.GetTestKey(10000)}, nil,
 		},
 		{
-			"exist-val", tree, args{key: utils.GetTestKey(1)}, &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300},
+			"exist-val", tree, args{key: common.GetTestKey(1)}, &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300},
 		},
 	}
 	for _, tt := range tests {
@@ -73,8 +73,8 @@ func TestIRadixTree_Get(t *testing.T) {
 
 func TestIRadixTree_Delete(t *testing.T) {
 	tree := newRadixTree()
-	tree.Put(utils.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 1, ChunkOffset: 100})
-	tree.Put(utils.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300})
+	tree.Put(common.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 1, ChunkOffset: 100})
+	tree.Put(common.GetTestKey(1), &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300})
 	type args struct {
 		key []byte
 	}
@@ -86,10 +86,10 @@ func TestIRadixTree_Delete(t *testing.T) {
 		want1 bool
 	}{
 		{
-			"not-exist", tree, args{key: utils.GetTestKey(6000)}, nil, false,
+			"not-exist", tree, args{key: common.GetTestKey(6000)}, nil, false,
 		},
 		{
-			"exist", tree, args{key: utils.GetTestKey(1)}, &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300}, true,
+			"exist", tree, args{key: common.GetTestKey(1)}, &wal.ChunkPosition{BlockNumber: 3, ChunkOffset: 300}, true,
 		},
 	}
 

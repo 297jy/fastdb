@@ -3,7 +3,7 @@ package wal
 import (
 	"encoding/binary"
 	"errors"
-	"fastdb"
+	"fastdb/config"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"hash/crc32"
 	"io"
@@ -32,7 +32,7 @@ const (
 	chunkHeaderSize = 7
 
 	// 32 KB
-	blockSize = 32 * fastdb.KB
+	blockSize = 32 * config.KB
 
 	fileModePerm = 0644
 )

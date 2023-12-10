@@ -1,4 +1,4 @@
-package utils
+package common
 
 func LongestPrefix(k1, k2 []byte) int {
 	num := min(len(k1), len(k2))

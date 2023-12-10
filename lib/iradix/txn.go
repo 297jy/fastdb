@@ -2,7 +2,7 @@ package iradix
 
 import (
 	"bytes"
-	"fastdb/utils"
+	"fastdb/common"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 )
 
@@ -73,7 +73,7 @@ func (t *Txn[T]) insert(n *Node[T], k, search []byte, v T) (*Node[T], T, bool) {
 		return nc, zero, false
 	}
 
-	commonPrefix := utils.LongestPrefix(search, child.prefix)
+	commonPrefix := common.LongestPrefix(search, child.prefix)
 	if commonPrefix == len(child.prefix) {
 		search = search[commonPrefix:]
 		newChild, oldVal, didUpdate := t.insert(child, k, search, v)
@@ -210,7 +210,7 @@ func (t *Txn[T]) mergeChild(n *Node[T]) {
 	e := n.edges[0]
 	child := e.node
 
-	n.prefix = utils.Concat(n.prefix, child.prefix)
+	n.prefix = common.Concat(n.prefix, child.prefix)
 	n.leaf = child.leaf
 	if len(child.edges) != 0 {
 		n.edges = make(edges[T], len(child.edges))

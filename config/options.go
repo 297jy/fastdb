@@ -1,4 +1,4 @@
-package fastdb
+package config
 
 import "os"
 
@@ -17,6 +17,12 @@ type DbOptions struct {
 	Sync bool
 
 	BytesPerSync uint32
+}
+
+type ServerOptions struct {
+	BatchOptions BatchOptions
+	DbOptions    DbOptions
+	Port         uint16
 }
 
 const (

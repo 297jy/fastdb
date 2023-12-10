@@ -1,7 +1,7 @@
 package wal
 
 import (
-	"fastdb"
+	"fastdb/config"
 	"os"
 )
 
@@ -26,9 +26,9 @@ type Options struct {
 
 var DefaultOptions = Options{
 	DirPath:        os.TempDir(),
-	SegmentSize:    fastdb.GB,
+	SegmentSize:    config.GB,
 	SegmentFileExt: ".SEG",
-	BlockCache:     32 * fastdb.KB * 10,
+	BlockCache:     32 * config.KB * 10,
 	Sync:           false,
 	BytesPerSync:   0,
 }

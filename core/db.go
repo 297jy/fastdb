@@ -2,7 +2,8 @@ package core
 
 import (
 	"errors"
-	"fastdb"
+	"fastdb/common"
+	"fastdb/config"
 	"fastdb/index"
 	"fastdb/wal"
 	"github.com/bwmarrin/snowflake"
@@ -25,7 +26,7 @@ type DB struct {
 	dataFiles *wal.WAL
 	hintFile  *wal.WAL
 	index     index.Indexer
-	options   fastdb.DbOptions
+	options   config.DbOptions
 	fileLock  *flock.Flock
 	mu        sync.RWMutex
 	closed    bool
@@ -33,15 +34,15 @@ type DB struct {
 	mergeRunning uint32
 }
 
-func Open(options fastdb.DbOptions) (*DB, error) {
+func Open(options config.DbOptions) (*DB, error) {
 	if err := checkOptions(options); err != nil {
-		return nil, err
+		return nil, common.NewErr(&common.InnerErrNo, err)
 	}
 
 	// create data directory if not exist
 	if _, err := os.Stat(options.DirPath); err != nil {
-		if err := os.MkdirAll(options.DirPath, os.ModePerm); err != nil {
-			return nil, err
+		if mkErr := os.MkdirAll(options.DirPath, os.ModePerm); mkErr != nil {
+			return nil, common.NewErr(&common.InnerErrNo, mkErr)
 		}
 	}
 
@@ -49,10 +50,10 @@ func Open(options fastdb.DbOptions) (*DB, error) {
 	fileLock := flock.New(filepath.Join(options.DirPath, fileLockName))
 	hold, err := fileLock.TryLock()
 	if err != nil {
-		return nil, err
+		return nil, common.NewErr(&common.InnerErrNo, err)
 	}
 	if !hold {
-		return nil, fastdb.ErrDatabaseIsUsing
+		return nil, common.NewErr(&common.DatabaseIsUsingErrNo, common.ErrDatabaseIsUsing)
 	}
 
 	walFiles, err := wal.Open(wal.Options{
@@ -64,7 +65,7 @@ func Open(options fastdb.DbOptions) (*DB, error) {
 		BytesPerSync:   options.BytesPerSync,
 	})
 	if err != nil {
-		return nil, err
+		return nil, common.NewErr(&common.InnerErrNo, err)
 	}
 
 	db := &DB{
@@ -74,13 +75,13 @@ func Open(options fastdb.DbOptions) (*DB, error) {
 		fileLock:  fileLock,
 	}
 	if err = db.loadIndexFromWAL(); err != nil {
-		return nil, err
+		return nil, common.NewErr(&common.InnerErrNo, err)
 	}
 
 	return db, nil
 }
 
-func checkOptions(options fastdb.DbOptions) error {
+func checkOptions(options config.DbOptions) error {
 	if options.DirPath == "" {
 		return errors.New("database dir path is empty")
 	}
@@ -149,7 +150,7 @@ func (db *DB) Close() error {
 }
 
 func (db *DB) Put(key []byte, value []byte) error {
-	options := fastdb.DefaultBatchOptions
+	options := config.DefaultBatchOptions
 	options.Sync = false
 	batch := db.NewBatch(options)
 	if err := batch.Put(key, value); err != nil {
@@ -159,7 +160,7 @@ func (db *DB) Put(key []byte, value []byte) error {
 }
 
 func (db *DB) Get(key []byte) ([]byte, error) {
-	options := fastdb.DefaultBatchOptions
+	options := config.DefaultBatchOptions
 	// Read-only operation
 	options.ReadOnly = true
 	batch := db.NewBatch(options)
@@ -170,7 +171,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 }
 
 func (db *DB) Delete(key []byte) error {
-	options := fastdb.DefaultBatchOptions
+	options := config.DefaultBatchOptions
 	options.Sync = false
 	batch := db.NewBatch(options)
 	if err := batch.Delete(key); err != nil {
